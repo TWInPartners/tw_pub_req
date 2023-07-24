@@ -16,6 +16,15 @@ class App(ttk.Window):
         # run
         self.mainloop()
 
+class Start_Automation(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        # place location here
+        self.pack()
+
+    def select_recipients(self):
+        # Get table from dictionary with table rows being selectable and to
+
 class Add_recipients(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -25,39 +34,6 @@ class Add_recipients(ttk.Frame):
         self.add_recipient_name()
 
     # Add the recipient to the recipient dictionary
-    def add_recipient_name(self):
-
-        # create widgets
-        add_recipient_first_name_string = tk.StringVar()
-        add_recipient_first_name_entry = ttk.Entry(self, textvariable=add_recipient_first_name_string)
-        add_recipient_first_name_label = ttk.Label(self, text='First Name')
-        add_recipient_last_name_string = tk.StringVar()
-        add_recipient_last_name_entry = ttk.Entry(self, textvariable=add_recipient_last_name_string)
-        add_recipient_last_name_label = ttk.Label(self, text='Last Name')
-        add_recipient_organization_string = tk.StringVar()
-        add_recipient_organization_entry = ttk.Entry(self, textvariable=add_recipient_organization_string)
-        add_recipient_organization_label = ttk.Label(self, text='Organization Name')
-        add_recipient_email_string = tk.StringVar()
-        add_recipient_email_entry = ttk.Entry(self, textvariable=add_recipient_email_string)
-        add_recipient_email_label = ttk.Label(self, text='Email Address')
-
-        # create submit button
-        add_recipient_submit_button = ttk.Button(self, text='Submit', command=self.add_recipient_to_dictionary)
-
-        # create grid
-        self.columnconfigure((0,1), weight=1,uniform='a')
-        self.rowconfigure((0,1,2,3), weight=1,uniform='a')
-
-        # place widgets
-        add_recipient_first_name_label.grid(column=0, row=0, padx=3, pady=3)
-        add_recipient_first_name_entry.grid(column=1, row=0, padx=3, pady=3)
-        add_recipient_last_name_label.grid(column=0, row=1, padx=3, pady=3)
-        add_recipient_last_name_entry.grid(column=1, row=1,padx=3, pady=3)
-        add_recipient_organization_label.grid(column=0, row=2, padx=3, pady=3)
-        add_recipient_organization_entry.grid(column=1, row=2, padx=3, pady=3)
-        add_recipient_email_label.grid(column=0, row=3, padx=3, pady=3)
-        add_recipient_email_entry.grid(column=1, row=3, padx=3, pady=3)
-
     def add_recipient_to_dictionary(self):
         # Get the users-entered data
         first_name = first_name_string.get()
@@ -83,5 +59,39 @@ class Add_recipients(ttk.Frame):
 
         # Print the updated recipient dictionary
         print(recipient_dictionary)
+
+    def add_recipient_name(self):
+
+        # create widgets
+        add_recipient_first_name_string = tk.StringVar()
+        add_recipient_first_name_entry = ttk.Entry(self, textvariable=add_recipient_first_name_string)
+        add_recipient_first_name_label = ttk.Label(self, text='First Name')
+        add_recipient_last_name_string = tk.StringVar()
+        add_recipient_last_name_entry = ttk.Entry(self, textvariable=add_recipient_last_name_string)
+        add_recipient_last_name_label = ttk.Label(self, text='Last Name')
+        add_recipient_organization_string = tk.StringVar()
+        add_recipient_organization_entry = ttk.Entry(self, textvariable=add_recipient_organization_string)
+        add_recipient_organization_label = ttk.Label(self, text='Organization Name')
+        add_recipient_email_string = tk.StringVar()
+        add_recipient_email_entry = ttk.Entry(self, textvariable=add_recipient_email_string)
+        add_recipient_email_label = ttk.Label(self, text='Email Address')
+
+        # create submit button
+        add_recipient_submit_button = ttk.Button(self, text='Submit', command=self.add_recipient_to_dictionary)
+
+        # create grid
+        self.columnconfigure((0,1), weight=1,uniform='a')
+        self.rowconfigure((0,1,2,3,4), weight=1,uniform='a')
+
+        # place widgets
+        add_recipient_first_name_label.grid(column=0, row=0, padx=3, pady=3)
+        add_recipient_first_name_entry.grid(column=1, row=0, padx=3, pady=3)
+        add_recipient_last_name_label.grid(column=0, row=1, padx=3, pady=3)
+        add_recipient_last_name_entry.grid(column=1, row=1,padx=3, pady=3)
+        add_recipient_organization_label.grid(column=0, row=2, padx=3, pady=3)
+        add_recipient_organization_entry.grid(column=1, row=2, padx=3, pady=3)
+        add_recipient_email_label.grid(column=0, row=3, padx=3, pady=3)
+        add_recipient_email_entry.grid(column=1, row=3, padx=3, pady=3)
+        add_recipient_submit_button.grid(columnspan=2, row=4)
 
 App()
