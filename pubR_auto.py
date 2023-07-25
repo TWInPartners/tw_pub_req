@@ -1,5 +1,6 @@
 import tkinter as tk
 import ttkbootstrap as ttk
+from ttkbootstrap.widgets import DateEntry
 
 recipient_dictionary = {}
 
@@ -23,6 +24,7 @@ class App(ttk.Window):
 
         self.select_recipients = Select_Recipients(self)
         self.select_template = Select_Template(self)
+        self.set_start = Set_Start(self)
         self.add_recipients = Add_recipients(self)
 
         # Bind save option to a function that saves the data
@@ -71,8 +73,10 @@ class Select_Recipients(ttk.Frame):
 
         # create the table
         treeview = ttk.Treeview(self, columns=('First Name', 'Organization'), show='headings')
+        treeview_label = ttk.Label(self, text='Select Recipients')
         treeview.heading('First Name', text='First Name')
         treeview.heading('Organization', text='Organization')
+        treeview_label.pack()
         treeview.pack(fill='both', expand=True, padx=5, pady=5)
 
         # Add the data to the table
@@ -109,6 +113,18 @@ class Select_Template(ttk.Frame):
     def template_selection_callback(self, event):
         selected_template = event.widget.get()
 
+class Set_Start(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.pack()
+
+        # create widget
+        calendar = DateEntry(self)
+        calendar_label = ttk.Label(self, text='Select Start Date')
+        
+        # layout
+        calendar_label.pack()
+        calendar.pack(pady=10)
 
 class Add_recipients(ttk.Frame):
     def __init__(self, parent):
