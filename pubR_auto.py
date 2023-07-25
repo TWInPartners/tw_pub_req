@@ -22,8 +22,8 @@ class Start_Automation(ttk.Frame):
         # place location here
         self.pack()
 
-    def select_recipients(self):
-        # Get table from dictionary with table rows being selectable and to
+    #def select_recipients(self):
+        # Get table from dictionary with table rows being selectable and store the data
 
 class Add_recipients(ttk.Frame):
     def __init__(self, parent):
