@@ -14,6 +14,51 @@ template_dictionary = {
     f'Pursuant to Article I, section 24 of the Florida Constitution, and chapter 119, F.S. I am requesting an opportunity to inspect or obtain copies of public records that indicate addresses that have code violations for high grass, structural damage, and/or mold within the past 60 day. Please include the name and contact number associated with the account. If there are any fees for searching or copying these records, please inform me before filling my request. Should you deny my request, or any part of the request, please state in writing the basis for the denial, including the exact statutory citation authorizing the denial as required by s. 119.07(1)(d), F.S. I will contact your office within 24 hours to discuss when I may expect fulfillment of my request, and payment of any statutorily prescribed fees.  If you have any questions in the interim, you may contact me at 972-415-8550. Thank you Nathaniel Wilson']
 }
 
+class Select_Recipients(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        # place location here
+        self.pack()      
+
+                
+        # create the table
+        treeview = ttk.Treeview(self, columns=('First Name', 'Organization'), show='headings')
+        treeview_label = ttk.Label(self, text='Select Recipients')
+        treeview.heading('First Name', text='First Name')
+        treeview.heading('Organization', text='Organization')
+        treeview_label.pack()
+        treeview.pack(fill='both', expand=True, padx=5, pady=5)
+
+        # Add the data to the table
+        #for company, recipient_data in recipient_dictionary.items():
+            #treeview.insert('', 'end', values=[recipient_data['first_name'], company])
+        self.treeview = treeview
+
+            
+
+        # Bind the on_select() furnction to the treeview's selection event
+        self.treeview.bind('<<TreeviewSelect>>', self.select_recipients)
+
+    def select_recipients(self, event):
+        # Get table from dictionary with table rows being selectable and store the data
+        selected_item = self.treeview.selection()[0]
+        recipient_data = recipient_dictionary[self.treeview.item(selected_item)['values'][1]]
+        first_name = recipient_data['first_name']
+        email = recipient_data['email']
+
+        scrollbar_table = ttk.Scrollbar(self, orient='vertical', command=self.treeview.yview)
+        scrollbar_table.place(relx=1, rely=0, relheight=1, anchor='ne')
+
+    def update_table(self):
+        # clear existing rows in the table
+        for row in self.treeview.get_children():
+            self.treeview.delete(row)
+
+        # Add the data to the table
+        for company, recipient_data in recipient_dictionary.items():
+            self.treeview.insert('', 'end', values=[recipient_data['first_name'], company])
+
+
 class App(ttk.Window):
     def __init__(self):
         # setup
@@ -62,39 +107,90 @@ class App(ttk.Window):
         # Add the menu bar
         self.config(menu=menubar)
 
+        # Populate the table initially
+        self.update_table_data()
+
         # run
         self.mainloop()
 
-class Select_Recipients(ttk.Frame):
+    def update_table_data(self):
+        # Update the table with the latest data from the recipient_dictionary
+        self.select_recipients.update_table()
+
+class Add_recipients(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         # place location here
-        self.pack()      
+        self.app_instance = parent
+        self.pack()
 
-        # create the table
-        treeview = ttk.Treeview(self, columns=('First Name', 'Organization'), show='headings')
-        treeview_label = ttk.Label(self, text='Select Recipients')
-        treeview.heading('First Name', text='First Name')
-        treeview.heading('Organization', text='Organization')
-        treeview_label.pack()
-        treeview.pack(fill='both', expand=True, padx=5, pady=5)
+        self.add_recipient_first_name_string = tk.StringVar()
+        self.add_recipient_last_name_string = tk.StringVar()
+        self.add_recipient_organization_string = tk.StringVar()
+        self.add_recipient_email_string = tk.StringVar()
 
-        # Add the data to the table
-        for company, recipient_data in recipient_dictionary.items():
-            treeview.insert('', 'end', values=[recipient_data['first_name'], company])
+        self.add_recipient_name()
 
-        def select_recipients():
-            # Get table from dictionary with table rows being selectable and store the data
-            selected_item = treeview.selection()[0]
-            recipient_data = recipient_dictionary[treeview.item(selected_item)['values'][1]]
-            first_name = recipient_data['first_name']
-            email = recipient_data['email']
+    # Add the recipient to the recipient dictionary
+    def add_recipient_to_dictionary(self):
+        # Get the users-entered data
+        first_name = self.add_recipient_first_name_string.get()
+        last_name = self.add_recipient_last_name_string.get()
+        organization = self.add_recipient_organization_string.get()
+        email = self.add_recipient_email_string.get()
 
-        # Bind the on_select() furnction to the treeview's selection event
-        treeview.bind('<<TreeviewSelect>>', select_recipients)
+        # Create a dictionary entry using the company name as the key.
+        recipient_data = {
+            'first_name': self.add_recipient_first_name_string.get(),
+            'last_name': self.add_recipient_last_name_string.get(),
+            'organization': self.add_recipient_organization_string.get(),
+            'email': self.add_recipient_email_string.get()
+        }
 
-        scrollbar_table = ttk.Scrollbar(self, orient='vertical', command=treeview.yview)
-        scrollbar_table.place(relx=1, rely=0, relheight=1, anchor='ne')
+        recipient_dictionary[organization] = recipient_data
+
+        # After adding the recipient, update the table data
+        self.app_instance.update_table_data()
+
+        # Clear the entry fields
+        self.add_recipient_first_name_string.set('')
+        self.add_recipient_last_name_string.set('')
+        self.add_recipient_organization_string.set('')
+        self.add_recipient_email_string.set('')
+
+    def add_recipient_name(self):
+
+        # create widgets
+        add_recipient_first_name_entry = ttk.Entry(self, textvariable=self.add_recipient_first_name_string)
+        add_recipient_first_name_label = ttk.Label(self, text='First Name')
+        add_recipient_last_name_entry = ttk.Entry(self, textvariable=self.add_recipient_last_name_string)
+        add_recipient_last_name_label = ttk.Label(self, text='Last Name')
+        add_recipient_organization_entry = ttk.Entry(self, textvariable=self.add_recipient_organization_string)
+        add_recipient_organization_label = ttk.Label(self, text='Organization Name')
+        add_recipient_email_entry = ttk.Entry(self, textvariable=self.add_recipient_email_string)
+        add_recipient_email_label = ttk.Label(self, text='Email Address')
+
+        # create submit button
+        add_recipient_submit_button = ttk.Button(self, text='Add Recipient', command=self.add_recipient_to_dictionary)
+
+        # create grid
+        self.columnconfigure((0,1), weight=1,uniform='a')
+        self.rowconfigure((0,1,2,3,4), weight=1,uniform='a')
+
+        # place widgets
+        add_recipient_first_name_label.grid(column=0, row=0, padx=3, pady=3)
+        add_recipient_first_name_entry.grid(column=1, row=0, padx=3, pady=3)
+        add_recipient_last_name_label.grid(column=0, row=1, padx=3, pady=3)
+        add_recipient_last_name_entry.grid(column=1, row=1,padx=3, pady=3)
+        add_recipient_organization_label.grid(column=0, row=2, padx=3, pady=3)
+        add_recipient_organization_entry.grid(column=1, row=2, padx=3, pady=3)
+        add_recipient_email_label.grid(column=0, row=3, padx=3, pady=3)
+        add_recipient_email_entry.grid(column=1, row=3, padx=3, pady=3)
+        add_recipient_submit_button.grid(columnspan=2, row=4)
+
+
+        #self.update_table()
+        
 
 class Select_Template(ttk.Frame):
     def __init__(self, parent):
@@ -126,70 +222,5 @@ class Set_Start(ttk.Frame):
         calendar_label.pack()
         calendar.pack(pady=10)
 
-class Add_recipients(ttk.Frame):
-    def __init__(self, parent):
-        super().__init__(parent)
-        # place location here
-        self.pack()
-
-        self.add_recipient_name()
-
-    # Add the recipient to the recipient dictionary
-    def add_recipient_to_dictionary(self):
-        # Get the users-entered data
-        first_name = add_recipient_first_name_string.get()
-        last_name = add_recipient_last_name_string.get()
-        organization_name = add_recipient_organization_name_string.get()
-        email = add_recipient_email_string.get()
-
-        # Create a dictionary entry using the company name as the key.
-        recipient_data = {
-            'first_name': first_name,
-            'last_name': last_name,
-            'organization_name': organization_name,
-            'email': email
-        }
-
-        recipient_dictionary[organization_name] = recipient_data
-
-        # Clear the entry fields
-        add_recipient_first_name_string.set('')
-        add_recipient_last_name_string.set('')
-        add_recipient_organization_string.set('')
-        add_recipient_email_string.set('')
-
-    def add_recipient_name(self):
-
-        # create widgets
-        add_recipient_first_name_string = tk.StringVar()
-        add_recipient_first_name_entry = ttk.Entry(self, textvariable=add_recipient_first_name_string)
-        add_recipient_first_name_label = ttk.Label(self, text='First Name')
-        add_recipient_last_name_string = tk.StringVar()
-        add_recipient_last_name_entry = ttk.Entry(self, textvariable=add_recipient_last_name_string)
-        add_recipient_last_name_label = ttk.Label(self, text='Last Name')
-        add_recipient_organization_string = tk.StringVar()
-        add_recipient_organization_entry = ttk.Entry(self, textvariable=add_recipient_organization_string)
-        add_recipient_organization_label = ttk.Label(self, text='Organization Name')
-        add_recipient_email_string = tk.StringVar()
-        add_recipient_email_entry = ttk.Entry(self, textvariable=add_recipient_email_string)
-        add_recipient_email_label = ttk.Label(self, text='Email Address')
-
-        # create submit button
-        add_recipient_submit_button = ttk.Button(self, text='Add Recipient', command=self.add_recipient_to_dictionary)
-
-        # create grid
-        self.columnconfigure((0,1), weight=1,uniform='a')
-        self.rowconfigure((0,1,2,3,4), weight=1,uniform='a')
-
-        # place widgets
-        add_recipient_first_name_label.grid(column=0, row=0, padx=3, pady=3)
-        add_recipient_first_name_entry.grid(column=1, row=0, padx=3, pady=3)
-        add_recipient_last_name_label.grid(column=0, row=1, padx=3, pady=3)
-        add_recipient_last_name_entry.grid(column=1, row=1,padx=3, pady=3)
-        add_recipient_organization_label.grid(column=0, row=2, padx=3, pady=3)
-        add_recipient_organization_entry.grid(column=1, row=2, padx=3, pady=3)
-        add_recipient_email_label.grid(column=0, row=3, padx=3, pady=3)
-        add_recipient_email_entry.grid(column=1, row=3, padx=3, pady=3)
-        add_recipient_submit_button.grid(columnspan=2, row=4)
 
 App()
