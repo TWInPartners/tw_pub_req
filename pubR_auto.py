@@ -1,8 +1,21 @@
+import json
+import os
 import tkinter as tk
+from tkinter import messagebox
 import ttkbootstrap as ttk
 from ttkbootstrap.widgets import DateEntry
 
-recipient_dictionary = {}
+#Load recipient data from a JSON file (if it exists)
+
+try:
+    if not os.path.exists('data.json'):
+        with open('data.json', 'w') as file:
+            json.dump({}, file)
+            
+    with open('data.json', 'r') as file:
+        recipient_dictionary = json.load(file)
+except FileExistsError:
+    recipient_dictionary = {}
 
 template_dictionary = {
     'water list': 
@@ -19,35 +32,37 @@ class Select_Recipients(ttk.Frame):
         super().__init__(parent)
         # place location here
         self.pack()      
-
-                
-        # create the table
-        treeview = ttk.Treeview(self, columns=('First Name', 'Organization'), show='headings')
-        treeview_label = ttk.Label(self, text='Select Recipients')
-        treeview.heading('First Name', text='First Name')
-        treeview.heading('Organization', text='Organization')
-        treeview_label.pack()
-        treeview.pack(fill='both', expand=True, padx=5, pady=5)
-
-        # Add the data to the table
-        #for company, recipient_data in recipient_dictionary.items():
-            #treeview.insert('', 'end', values=[recipient_data['first_name'], company])
-        self.treeview = treeview
-
-            
-
-        # Bind the on_select() furnction to the treeview's selection event
+        self.treeview = self.create_treeview()
         self.treeview.bind('<<TreeviewSelect>>', self.select_recipients)
+                
+    def create_treeview(self):
+        treeview_label = ttk.Label(self, text='Select Recipients')
+        treeview_label.pack()
 
+        # create the table
+        self.treeview = ttk.Treeview(self, columns=('First Name', 'Organization'), show='headings')
+        self.treeview.heading('First Name', text='First Name')
+        self.treeview.heading('Organization', text='Organization')
+        self.treeview.pack(fill='both', expand=True, padx=5, pady=5)
+
+        self.scrollbar_table = ttk.Scrollbar(self, orient='vertical', command=self.treeview.yview)
+        self.scrollbar_table.place(relx=1, rely=0, relheight=1, anchor='ne')
+
+        self.treeview.config(yscrollcommand=self.scrollbar_table.set)
+        self.treeview.pack(fill='both', expand=True, padx=5, pady=5)
+
+        return self.treeview
+    
     def select_recipients(self, event):
-        # Get table from dictionary with table rows being selectable and store the data
-        selected_item = self.treeview.selection()[0]
-        recipient_data = recipient_dictionary[self.treeview.item(selected_item)['values'][1]]
-        first_name = recipient_data['first_name']
-        email = recipient_data['email']
+        try:
+            # Get table from dictionary with table rows being selectable and store the data
+            selected_item = self.treeview.selection()[0]
+            recipient_data = recipient_dictionary[self.treeview.item(selected_item)['values'][1]]
+            first_name = recipient_data['first_name']
+            email = recipient_data['email']
 
-        scrollbar_table = ttk.Scrollbar(self, orient='vertical', command=self.treeview.yview)
-        scrollbar_table.place(relx=1, rely=0, relheight=1, anchor='ne')
+        except Exception as e:
+            messagebox.showerror('Error', f'An error occurred while selecting recipients: {e}')
 
     def update_table(self):
         # clear existing rows in the table
@@ -57,65 +72,6 @@ class Select_Recipients(ttk.Frame):
         # Add the data to the table
         for company, recipient_data in recipient_dictionary.items():
             self.treeview.insert('', 'end', values=[recipient_data['first_name'], company])
-
-
-class App(ttk.Window):
-    def __init__(self):
-        # setup
-        super().__init__(themename='cyborg')
-        self.title('Public Request')
-        self.geometry('800x600')
-        self.minsize(600,300)
-
-        self.select_recipients = Select_Recipients(self)
-        self.select_template = Select_Template(self)
-        self.set_start = Set_Start(self)
-        self.add_recipients = Add_recipients(self)
-
-        # Bind save option to a function that saves the data
-        def save_data(self):
-            # Save the data to a file
-            with open('data.txt', 'w') as file:
-                file.write(str(recipient_dictionary))
-
-        # Bind open option to function that opens the data file
-        def open_data(self):
-            # Open the data file
-            global recipient_dictionary
-            with open('data.txt', 'r') as file:
-                recipient_dictionary = eval(file.read())
-
-        # Bind send option to function that sends the email
-        def send_email(self):
-            # Send the email
-            pass
-
-        # create menu bar
-        menubar = ttk.Menu(self)
-
-        # Add a menu to the menu bar
-        filemenu = ttk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label='File', menu=filemenu)
-
-        # Add a save option to the menu
-        filemenu.add_command(label='Save', command=save_data)
-        filemenu.add_command(label='Open', command=open_data)
-
-        # Add a send option to the menu
-        filemenu.add_command(label='Send', command=send_email)
-
-        # Add the menu bar
-        self.config(menu=menubar)
-
-        # Populate the table initially
-        self.update_table_data()
-
-        # run
-        self.mainloop()
-
-    def update_table_data(self):
-        # Update the table with the latest data from the recipient_dictionary
-        self.select_recipients.update_table()
 
 class Add_recipients(ttk.Frame):
     def __init__(self, parent):
@@ -130,33 +86,6 @@ class Add_recipients(ttk.Frame):
         self.add_recipient_email_string = tk.StringVar()
 
         self.add_recipient_name()
-
-    # Add the recipient to the recipient dictionary
-    def add_recipient_to_dictionary(self):
-        # Get the users-entered data
-        first_name = self.add_recipient_first_name_string.get()
-        last_name = self.add_recipient_last_name_string.get()
-        organization = self.add_recipient_organization_string.get()
-        email = self.add_recipient_email_string.get()
-
-        # Create a dictionary entry using the company name as the key.
-        recipient_data = {
-            'first_name': self.add_recipient_first_name_string.get(),
-            'last_name': self.add_recipient_last_name_string.get(),
-            'organization': self.add_recipient_organization_string.get(),
-            'email': self.add_recipient_email_string.get()
-        }
-
-        recipient_dictionary[organization] = recipient_data
-
-        # After adding the recipient, update the table data
-        self.app_instance.update_table_data()
-
-        # Clear the entry fields
-        self.add_recipient_first_name_string.set('')
-        self.add_recipient_last_name_string.set('')
-        self.add_recipient_organization_string.set('')
-        self.add_recipient_email_string.set('')
 
     def add_recipient_name(self):
 
@@ -190,13 +119,62 @@ class Add_recipients(ttk.Frame):
 
 
         #self.update_table()
-        
+
+    # Add the recipient to the recipient dictionary
+    def add_recipient_to_dictionary(self):
+        try:
+            # Get the users-entered data
+            first_name = self.add_recipient_first_name_string.get()
+            last_name = self.add_recipient_last_name_string.get()
+            organization = self.add_recipient_organization_string.get()
+            email = self.add_recipient_email_string.get()
+
+            if not all([first_name, last_name, organization, email]):
+                messagebox.showwarning('Warning','All fields must be filled out.')
+                return
+
+            # Create a dictionary entry using the company name as the key.
+            recipient_data = {
+                'first_name': self.add_recipient_first_name_string.get(),
+                'last_name': self.add_recipient_last_name_string.get(),
+                'organization': self.add_recipient_organization_string.get(),
+                'email': self.add_recipient_email_string.get()
+            }
+
+            # check if orginization is the same messagebox popup
+            if organization in recipient_dictionary:
+                result = messagebox.askquestion('Duplicate Organization', 'An entry with this organization name already exists. Do you want to overwrite it?', icon='warning')
+                if result == 'no':
+                    return
+
+            recipient_dictionary[organization] = recipient_data
+
+            # After adding the recipient, update the table data
+            self.app_instance.update_table_data()
+
+            # Clear the entry fields
+            self.add_recipient_first_name_string.set('')
+            self.add_recipient_last_name_string.set('')
+            self.add_recipient_organization_string.set('')
+            self.add_recipient_email_string.set('')
+
+        except ValueError as e:
+                messagebox.showerror('Error', f'An error occurred while adding the recipient: {e}')
+
+    def update_json_file(self):
+        try:
+            with open('data.json', 'w') as file:
+                json.dump(recipient_dictionary, file)
+        except IOError as e:
+            messagebox.showerror('Error', f'An error occurred while saving the data to the JSON file: {e}')
 
 class Select_Template(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.pack()
+        self.create_template_selection()
 
+    def create_template_selection(self):
         #template combobox
         selection_string = tk.StringVar()
         template_selection = ttk.Combobox(self, textvariable=selection_string)
@@ -207,13 +185,22 @@ class Select_Template(ttk.Frame):
         template_selection.pack(pady=7)
 
     def template_selection_callback(self, event):
-        selected_template = event.widget.get()
+        try:
+            selected_template = event.widget.get()
+            if not selected_template:
+                print('You must select a template.')
+                return
+            
+        except Exception as e:
+            messagebox.showerror('Error', f'An error occurred while selecting the template: {e}')   
 
 class Set_Start(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.pack()
+        self.create_calendar()
 
+    def create_calendar(self):
         # create widget
         calendar = DateEntry(self)
         calendar_label = ttk.Label(self, text='Select Start Date')
@@ -222,5 +209,81 @@ class Set_Start(ttk.Frame):
         calendar_label.pack()
         calendar.pack(pady=10)
 
+class App(ttk.Window):
+    def __init__(self):
+        # setup
+        super().__init__(themename='cyborg')
+        self.title('Public Request')
+        self.geometry('800x600')
+        self.minsize(600,300)
 
-App()
+        self.setup_menu()
+
+        self.select_recipients = Select_Recipients(self)
+        self.select_template = Select_Template(self)
+        self.set_start = Set_Start(self)
+        self.add_recipients = Add_recipients(self)
+
+        # Populate the table initially
+        self.update_table_data()
+
+        # run
+        self.mainloop()
+
+    def setup_menu(self):
+        # create menu bar
+        menubar = ttk.Menu(self)
+        # Add the menu bar
+        self.config(menu=menubar)
+        self.create_menu_bar(menubar)
+
+    def create_menu_bar(self, menubar):
+        # Add a menu to the menu bar
+        filemenu = ttk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='File', menu=filemenu)
+        # Add a save option to the menu
+        filemenu.add_command(label='Save', command=self.save_data)
+        filemenu.add_command(label='Open', command=self.open_data)
+        filemenu.add_command(label='Send', command=self.send_email)
+
+    def save_data(self):
+        try:
+            # Save the data to a file
+            with open('data.json', 'w') as file:
+                json.dump(recipient_dictionary, file)
+        except IOError as e:
+            self.show_error('Error', f'An error occurred while saving data: {e}')
+        
+    def open_data(self):
+        try:
+            # Check if the file exists before attempting to open
+            if not os.path.exists('data.json'):
+                self.show_error('Error', 'The data file does not exist.')
+                return
+            
+            # Open and read the JSON data file
+            global recipient_dictionary
+            with open('data.json', 'r') as file:
+                recipient_dictionary.update(json.load(file))
+        except FileNotFoundError:
+            self.show_error('Error', 'The data file does not exist.')
+        except json.JSONDecodeError as e:
+            self.show_error('Error', f'An error occurred while opening data: {e}')
+
+    def send_email(self):
+        try:
+            # Send the email
+            pass
+        except Exception as e:
+            messagebox.showerror('Error', f'An error occurred while sending the email: {e}')
+        # Add a send option to the menu
+
+    def update_table_data(self):
+        # Update the table with the latest data from the recipient_dictionary
+        self.select_recipients.update_table()
+
+    def show_error(self, title, message):
+        messagebox.showerror(title, message)
+
+if __name__ == '__main__':
+    App()
