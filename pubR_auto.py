@@ -1,7 +1,7 @@
 import json
 import os
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 import ttkbootstrap as ttk
 from ttkbootstrap.widgets import DateEntry
 
@@ -282,6 +282,72 @@ class App(ttk.Window):
         filemenu.add_command(label='Open', command=self.open_data)
         filemenu.add_command(label='Send', command=self.send_email)
 
+        # add a separator
+        filemenu.add_separator()
+
+        # add a 'close' option
+        filemenu.add_command(label='Close', command=self.close_app)
+
+        self.config(menu=menubar)
+
+        # edit menu
+        editmenu = ttk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label='Edit', menu=editmenu)
+        editmenu.add_command(label='Edit Recipient', command=self.edit_recipient)
+
+    def show_edit_dialog(self, recipient_data):
+        # create new top-level window
+        edit_window = tk.Toplevel(self)
+        edit_window.title('Edit Recipient')
+        edit_window.geometry('300x300')
+
+        # temporary variables to hold the new values
+        new_first_name = tk.StringVar(value=recipient_data['first_name'])
+        new_last_name = tk.StringVar(value=recipient_data['last_name'])
+        new_email = tk.StringVar(value=recipient_data['email'])
+
+        # create and place widgets
+        ttk.Label(edit_window, text='First Name').grid(row=0, column=0)
+        ttk.Entry(edit_window, textvariable=new_first_name).grid(row=0, column=1)
+
+        ttk.Label(edit_window, text='Last Name').grid(row=1, column=0)
+        ttk.Entry(edit_window, textvariable=new_last_name).grid(row=1, column=1)
+
+        ttk.Label(edit_window, text='Email').grid(row=2, column=0)
+        ttk.Entry(edit_window, textvariable=new_email).grid(row=2, column=1)
+
+        # create a submit buttom
+        ttk.Button(edit_window, text='Submit', command=lambda: self.update_recipient(recipient_data['organization'], new_first_name.get(), new_last_name.get(), new_email.get(), edit_window)).grid(row=3, columnspan=2)
+    
+    def update_recipient(self, organization, new_first_name, new_last_name, new_email, edit_window):
+        # update the data
+        recipient_dictionary[organization]['first_name'] = new_first_name
+        recipient_dictionary[organization]['last_name'] = new_last_name
+        recipient_dictionary[organization]['email'] = new_email
+
+        # update JSON file
+        self.save_data()
+
+        # update the table
+        self.update_table_data()
+
+        # close the edit window
+        edit_window.destroy()
+
+    def edit_recipient(self):
+        try:
+            selected_item = self.select_recipients.treeview.selection()[0]
+            organization_name = self.select_recipients.treeview.item(selected_item)['values'][1]
+            recipient_data = recipient_dictionary[organization_name]
+
+            # show edit dialog
+            self.show_edit_dialog(recipient_data)
+
+        except IndexError:
+            messagebox.showwarning('No Selection', 'No recipient selected to edit.')
+        except Exception as e:
+            messagebox.showerror('Error', f'An error occurred when editing the recipient: {e}')
+
     def save_data(self):
         try:
             # Save the data to a file
@@ -320,6 +386,35 @@ class App(ttk.Window):
 
     def show_error(self, title, message):
         messagebox.showerror(title, message)
+
+    def close_app(self):
+        user_response = messagebox.askyesnocancel('Save changes', 'Do you want to save changes before closing?')
+
+        # cancel was clicked; do not close the app
+        if user_response is None:
+            return
+        
+        # Yes was clicked; Ask wether to overwite current file
+        elif user_response is True:
+            
+            #Logic for saving data
+            save_option = messagebox.askyesno('Save Data', 'Do you want to overwrite the existing data file?')
+            filename = 'data.json'
+
+            # overwrite current file
+            if save_option is True:
+                pass
+            else:
+                # ask for a new filename
+                filename = simpledialog.askstring('Input', 'Enter the new filename:')
+                # cancel was clicked in the filename dialog; do not close the app
+                if filename is None:
+                    return
+                # append .json if not present
+                filename = f'{filename}.json' if not filename.endswith('.json') else filename
+
+        # close the app
+        self.quit()
 
 if __name__ == '__main__':
     App()
