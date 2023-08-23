@@ -6,12 +6,11 @@ import ttkbootstrap as ttk
 from ttkbootstrap.widgets import DateEntry
 
 #Load recipient data from a JSON file (if it exists)
-
 try:
     if not os.path.exists('data.json'):
         with open('data.json', 'w') as file:
             json.dump({}, file)
-            
+
     with open('data.json', 'r') as file:
         recipient_dictionary = json.load(file)
 except FileExistsError:
@@ -30,10 +29,12 @@ template_dictionary = {
 class Select_Recipients(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        self.app_instance = parent
         # place location here
         self.pack()      
         self.treeview = self.create_treeview()
         self.treeview.bind('<<TreeviewSelect>>', self.select_recipients)
+        self.create_remove_button()
                 
     def create_treeview(self):
         treeview_label = ttk.Label(self, text='Select Recipients')
@@ -41,15 +42,15 @@ class Select_Recipients(ttk.Frame):
 
         # create the table
         self.treeview = ttk.Treeview(self, columns=('First Name', 'Organization'), show='headings')
-        self.treeview.heading('First Name', text='First Name')
-        self.treeview.heading('Organization', text='Organization')
+        self.treeview.heading('First Name', text='First Name', anchor=tk.W)
+        self.treeview.heading('Organization', text='Organization', anchor=tk.W)
         self.treeview.pack(fill='both', expand=True, padx=5, pady=5)
 
         self.scrollbar_table = ttk.Scrollbar(self, orient='vertical', command=self.treeview.yview)
         self.scrollbar_table.place(relx=1, rely=0, relheight=1, anchor='ne')
 
         self.treeview.config(yscrollcommand=self.scrollbar_table.set)
-        self.treeview.pack(fill='both', expand=True, padx=5, pady=5)
+        self.treeview.pack(side=tk.TOP, fill=tk.BOTH, expand=tk.YES, padx=5, pady=5)
 
         return self.treeview
     
@@ -72,6 +73,41 @@ class Select_Recipients(ttk.Frame):
         # Add the data to the table
         for company, recipient_data in recipient_dictionary.items():
             self.treeview.insert('', 'end', values=[recipient_data['first_name'], company])
+
+    def create_remove_button(self):
+        self.remove_button = ttk.Button(self, text='Remove Recipient', command=self.remove_recipient)
+        self.remove_button.pack()
+
+    def remove_recipient(self):
+        try:
+            selected_item = self.treeview.selection[0]
+            organization_name = self.treeview.item(selected_item)['values'][1]
+
+            # confirm removal
+            result = messagebox.askquestion('Remove Recipient', f'Are you sure you want to remove {organization_name}?', icon='warning')
+            if result == 'no':
+                return
+            
+            # remove from treeview
+            self.treeview.delete(selected_item)
+
+            # remove from dictionary
+            del recipient_dictionary[organization_name]
+
+            # update the JSON file
+            self.update_json_file()
+
+        except IndexError:
+            messagebox.showwarning('No Selection', 'No recipient selected to remove.')
+        except Exception as e:
+            messagebox.showerror('Error', f'An error occured when removing the recipient: {e}')
+
+    def update_json_file(self):
+        try:
+            with open('data.json', 'w') as file:
+                json.dump(recipient_dictionary, file)
+        except IOError as e:
+            messagebox.showerror('Error', f'An error occurred while saving the data to the JSON file: {e}')
 
 class Add_recipients(ttk.Frame):
     def __init__(self, parent):
@@ -181,14 +217,14 @@ class Select_Template(ttk.Frame):
         template_selection_label = ttk.Label(self, text='Select A Template')
         template_selection_label.pack()
         template_selection['values'] = list(template_dictionary.keys())
-        template_selection.bind('<<ComboboxSelected>>', template_selection)
+        template_selection.bind('<<ComboboxSelected>>', self.template_selection_callback)
         template_selection.pack(pady=7)
 
     def template_selection_callback(self, event):
         try:
             selected_template = event.widget.get()
             if not selected_template:
-                print('You must select a template.')
+                messagebox.showerror('Error', 'You must select a template.')
                 return
             
         except Exception as e:
