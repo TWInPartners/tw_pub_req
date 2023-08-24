@@ -1,3 +1,6 @@
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import json
 import os
 import tkinter as tk
@@ -80,25 +83,58 @@ class Select_Recipients(ttk.Frame):
 
     def remove_recipient(self):
         try:
-            selected_item = self.treeview.selection[0]
-            organization_name = self.treeview.item(selected_item)['values'][1]
+            selected_items = self.treeview.selection()
+            # debugging line
+            print('Selected items:', selected_items)
+            if not selected_items:
+                raise IndexError('No selection made.')
+            
+            selected_item = selected_items[0]
+            item_data = self.treeview.item(selected_item)
+            # debugging line
+            print('Item data:', item_data)
+
+            if 'values' not in item_data:
+                raise KeyError('The key values was not found.')
+            
+            values = item_data['values']
+            if len(values) <2:
+                raise IndexError('Not enough elements in values.')
+            
+            organization_name = values[1]
 
             # confirm removal
             result = messagebox.askquestion('Remove Recipient', f'Are you sure you want to remove {organization_name}?', icon='warning')
-            if result == 'no':
-                return
             
-            # remove from treeview
-            self.treeview.delete(selected_item)
+            if result == 'yes':
+                # debugging line
+                print('Attempting to remove item:', selected_item)
 
-            # remove from dictionary
-            del recipient_dictionary[organization_name]
+                # remove from treeview
+                self.treeview.delete(selected_item)
+                self.treeview.selection_remove(selected_item)
 
-            # update the JSON file
-            self.update_json_file()
+                # remove from dictionary
+                if organization_name in recipient_dictionary:
+                    del recipient_dictionary[organization_name]
+                else:
+                    # debugging line
+                    print(f'Key {organization_name} not found in dictionary')
+
+                # update the JSON file
+                self.update_json_file()
+
+            elif result == 'no':
+                return
 
         except IndexError:
+            print('IndexError occurred')
+            print(f'selected_items: {selected_items}')
+            print(f'item_data: {item_data}')
+            print(f'values: {values}')
             messagebox.showwarning('No Selection', 'No recipient selected to remove.')
+        except KeyError as e:
+            messagebox.showwarning('Key Error', f'A key error occurred: {e}')
         except Exception as e:
             messagebox.showerror('Error', f'An error occured when removing the recipient: {e}')
 
@@ -208,14 +244,16 @@ class Select_Template(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.pack()
+        # take template data as an argument
+        self.template_dictionary = template_dictionary
         self.create_template_selection()
 
     def create_template_selection(self):
         #template combobox
         selection_string = tk.StringVar()
-        template_selection = ttk.Combobox(self, textvariable=selection_string)
         template_selection_label = ttk.Label(self, text='Select A Template')
         template_selection_label.pack()
+        template_selection = ttk.Combobox(self, textvariable=selection_string)
         template_selection['values'] = list(template_dictionary.keys())
         template_selection.bind('<<ComboboxSelected>>', self.template_selection_callback)
         template_selection.pack(pady=7)
@@ -227,23 +265,65 @@ class Select_Template(ttk.Frame):
                 messagebox.showerror('Error', 'You must select a template.')
                 return
             
+            # Do something with the selected template
+            # take template data 
         except Exception as e:
-            messagebox.showerror('Error', f'An error occurred while selecting the template: {e}')   
+            messagebox.showerror('Error', f'An error occurred while selecting the template: {e}')
 
 class Set_Start(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.pack()
+
+        # initialize Tkinter variable to hold the choice between 'Once' and 'Periodic'
+        self.send_option = tk.StringVar(value='once')
+
         self.create_calendar()
+        self.create_options()
 
     def create_calendar(self):
         # create widget
-        calendar = DateEntry(self)
         calendar_label = ttk.Label(self, text='Select Start Date')
+        calendar = DateEntry(self)
         
         # layout
         calendar_label.pack()
         calendar.pack(pady=10)
+
+    def create_options(self):
+        options_label = ttk.Label(self, text='Sending Options')
+        options_label.pack()
+
+        # radiobuttons for send options
+        self.radio_once = ttk.Radiobutton(self, text='Send Once', variable=self.send_option, value='once')
+        self.radio_periodic = ttk.Radiobutton(self, text='Send Periodically (1st and 15th)', variable=self.send_option, value='periodic')
+
+        # layout
+        self.radio_once.pack()
+        self.radio_periodic.pack()
+
+        # create and hide end_date picker
+        self.end_date_label = ttk.Label(self, text='Select End Date')
+        self.end_date = DateEntry(self)
+
+        self.end_date_label.pack()
+        self.end_date.pack()
+
+        # initially hidden
+        self.end_date_label.pack_forget()
+        self.end_date.pack_forget()
+
+        # show/hide end_date picker depending on option selected
+        self.radio_once.config(command=lambda:self.toggle_end_date('hide'))
+        self.radio_periodic.config(command=lambda: self.toggle_end_date('show'))
+
+    def toggle_end_date(self, action):
+        if action == 'show':
+            self.end_date_label.pack()
+            self.end_date.pack(pady=10)
+        elif action == 'hide':
+            self.end_date_label.pack_forget()
+            self.end_date.pack_forget()
 
 class App(ttk.Window):
     def __init__(self):
@@ -255,9 +335,12 @@ class App(ttk.Window):
 
         self.setup_menu()
 
+        # createing and placing/packing the Set_Start frame
         self.select_recipients = Select_Recipients(self)
         self.select_template = Select_Template(self)
+        #self.set_start = Set_Start(self)
         self.set_start = Set_Start(self)
+        self.set_start.pack(side=tk.TOP, fill=tk.X)
         self.add_recipients = Add_recipients(self)
 
         # Populate the table initially
@@ -375,7 +458,43 @@ class App(ttk.Window):
     def send_email(self):
         try:
             # Send the email
-            pass
+            #SMTP server config
+            smtp_server = 'smtp.example.com'
+            smtp_port = 587
+            smtp_username = 'username'
+            smtp_password = 'password'
+
+            # recipient and sender details
+            to_email = self.select_recipients
+            from_email = 'sender@exampl.com'
+
+            # message details
+            subject = '#'
+            body = ''
+
+            # create message
+            msg = MIMEMultipart()
+            msg['From'] = from_email
+            msg['To'] = to_email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+
+            # connect to smtp server
+            server = smtplib.SMTP(host=smtp_server, port=smtp_port)
+            server.starttls()
+
+            # login
+            server.login(smtp_username, smtp_password)
+
+            # send email
+            server.sendmail(from_email, to_email, msg.as_string())
+
+            # quit server
+            server.quit()
+
+        except smtplib.SMTPException as e:
+            messagebox.showerror('Error', f'An SMTP error occured: ')
+
         except Exception as e:
             messagebox.showerror('Error', f'An error occurred while sending the email: {e}')
         # Add a send option to the menu
